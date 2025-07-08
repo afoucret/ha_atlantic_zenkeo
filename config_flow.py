@@ -1,0 +1,92 @@
+"""Config flow for Atlantic Zenkeo AC."""
+import asyncio
+import logging
+from functools import partial
+from typing import Any
+
+import voluptuous as vol
+from getmac import get_mac_address
+
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
+from homeassistant.exceptions import HomeAssistantError
+
+from .const import DOMAIN
+from .pyzenkeo import ZenkeoAC
+
+_LOGGER = logging.getLogger(__name__)
+
+# This is the schema that will be used to generate the form for the user.
+STEP_USER_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required("host"): str,
+    }
+)
+
+
+async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+    """Validate the user input allows us to connect."""
+    host = data["host"]
+    mac_address = await hass.async_add_executor_job(
+        partial(get_mac_address, ip=host)
+    )
+
+    if not mac_address:
+        _LOGGER.error("Could not get MAC address for %s", host)
+        raise CannotConnect("mac_address")
+
+    api = ZenkeoAC(host, mac_address)
+
+    try:
+        if not await api.get_state():
+            _LOGGER.warning("Failed to get state from %s, device may not be a Zenkeo AC", host)
+            raise CannotConnect("no_state")
+    except asyncio.TimeoutError:
+        _LOGGER.warning("Connection to %s timed out", host)
+        raise CannotConnect("timeout")
+    except Exception as exc:
+        _LOGGER.exception("Unexpected error connecting to %s", host)
+        raise CannotConnect("unknown") from exc
+
+    # Return extra information that will be stored in the config entry.
+    return {"title": f"Zenkeo ({host})", "mac": mac_address}
+
+
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Atlantic Zenkeo AC."""
+
+    VERSION = 1
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle the initial step."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                info = await validate_input(self.hass, user_input)
+
+                # Set the unique ID and abort if it already exists
+                await self.async_set_unique_id(info["mac"])
+                self._abort_if_unique_id_configured()
+
+                # Add the mac to the data that will be stored in the config entry
+                data = {**user_input, "mac": info["mac"]}
+
+                return self.async_create_entry(title=info["title"], data=data)
+
+            except CannotConnect as e:
+                _LOGGER.error("Connection failed: %s", e)
+                errors["base"] = str(e)
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+
+        return self.async_show_form(
+            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
+
+
+class CannotConnect(HomeAssistantError):
+    """Error to indicate we cannot connect."""

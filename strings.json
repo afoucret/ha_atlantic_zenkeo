@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Atlantic Zenkeo AC",
+        "description": "Enter the connection details for your Zenkeo device.",
+        "data": {
+          "host": "Host (IP Address or Hostname)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect. Please check the host and try again.",
+      "unknown": "An unknown error occurred."
+    },
+    "abort": {
+      "already_configured": "This device is already configured."
+    }
+  }
+}
