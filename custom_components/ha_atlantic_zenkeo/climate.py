@@ -74,7 +74,7 @@ class ZenkeoClimate(ClimateEntity):
         self._attr_target_temperature = 21
         self._attr_current_temperature = 21
         self._attr_hvac_mode = HVACMode.OFF
-        self._attr_previous_hvac_mode = HVACMode.OFF
+        self._attr_previous_hvac_mode = HVACMode.COOL
         self._attr_fan_mode = FanSpeed.AUTO.name
 
     async def async_update(self) -> None:
