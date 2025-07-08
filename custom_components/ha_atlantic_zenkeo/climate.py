@@ -119,7 +119,12 @@ class ZenkeoClimate(ClimateEntity):
     async def _send_state(self) -> None:
         """Send the current state to the AC unit."""
         if self._attr_hvac_mode == HVACMode.OFF:
-            await self._api.turn_off()
+            await self._api.set_state(
+                power=False,
+                mode=HA_TO_AC_MODE[self._attr_hvac_mode],
+                fan_speed=FanSpeed[self._attr_fan_mode],
+                target_temp=self._attr_target_temperature,
+            )
         else:
             await self._api.set_state(
                 power=True,
