@@ -74,6 +74,7 @@ class ZenkeoClimate(ClimateEntity):
         self._attr_target_temperature = 21
         self._attr_current_temperature = 21
         self._attr_hvac_mode = HVACMode.OFF
+        self._attr_previous_hvac_mode = HVACMode.OFF
         self._attr_fan_mode = FanSpeed.AUTO.name
 
     async def async_update(self) -> None:
@@ -85,6 +86,7 @@ class ZenkeoClimate(ClimateEntity):
             self._attr_fan_mode = state.fan_speed.name
             if state.power:
                 self._attr_hvac_mode = AC_TO_HA_MODE.get(state.mode)
+                self._attr_previous_hvac_mode = self._attr_hvac_mode
             else:
                 self._attr_hvac_mode = HVACMode.OFF
         else:
@@ -99,6 +101,8 @@ class ZenkeoClimate(ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
         self._attr_hvac_mode = hvac_mode
+        if hvac_mode != HVACMode.OFF:
+            self._attr_previous_hvac_mode = hvac_mode
         await self._send_state()
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
@@ -113,7 +117,7 @@ class ZenkeoClimate(ClimateEntity):
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
-        self._attr_hvac_mode = HVACMode.OFF
+        self.async_set_hvac_mode(HVACMode.OFF)
         await self._send_state()
 
     async def _send_state(self) -> None:
@@ -121,7 +125,7 @@ class ZenkeoClimate(ClimateEntity):
         if self._attr_hvac_mode == HVACMode.OFF:
             await self._api.set_state(
                 power=False,
-                mode=HA_TO_AC_MODE[self._attr_hvac_mode],
+                mode=HA_TO_AC_MODE[self._attr_previous_hvac_mode],
                 fan_speed=FanSpeed[self._attr_fan_mode],
                 target_temp=self._attr_target_temperature,
             )
