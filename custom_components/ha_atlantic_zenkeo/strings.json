@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Atlantic Zenkeo AC",
-        "description": "Enter the connection details for your Zenkeo device.",
+        "title": "Set up Atlantic Zenkeo AC units",
+        "description": "Enter the connection details for your AC Zenkeo unit.",
         "data": {
           "host": "Host (IP Address or Hostname)"
         }
