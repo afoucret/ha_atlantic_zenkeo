@@ -33,21 +33,25 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     )
 
     if not mac_address:
-        _LOGGER.error("Could not get MAC address for %s", host)
-        raise CannotConnect("mac_address")
+        msg = "Could not get MAC address for %s", host
+        _LOGGER.error(msg)
+        raise CannotConnect(msg)
 
     api = ZenkeoAC(host, mac_address)
 
     try:
         if not await api.get_state():
-            _LOGGER.warning("Failed to get state from %s, device may not be a Zenkeo AC", host)
-            raise CannotConnect("no_state")
+            msg = "Failed to get state from %s, device may not be a Zenkeo AC", host
+            _LOGGER.warning(msg)
+            raise CannotConnect(msg)
     except asyncio.TimeoutError:
-        _LOGGER.warning("Connection to %s timed out", host)
-        raise CannotConnect("timeout")
+        msg = "Connection to %s timed out", host
+        _LOGGER.warning(msg)
+        raise CannotConnect(msg)
     except Exception as exc:
-        _LOGGER.exception("Unexpected error connecting to %s", host)
-        raise CannotConnect("unknown") from exc
+        msg = "Unexpected error connecting to %s", host
+        _LOGGER.exception(msg)
+        raise CannotConnect(msg) from exc
 
     # Return extra information that will be stored in the config entry.
     return {"title": f"Zenkeo ({host})", "mac": mac_address}
