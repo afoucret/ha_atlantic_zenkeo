@@ -130,8 +130,7 @@ class ZenkeoClimate(ClimateEntity):
                 power=True,
                 mode=HA_TO_AC_MODE[self._attr_hvac_mode],
                 fan_speed=FanSpeed[self._attr_fan_mode],
-                target_temp=self._att
-                r_target_temperature,
+                target_temp=self._attr_target_temperature,
             )
             self._update_state(state)
 
