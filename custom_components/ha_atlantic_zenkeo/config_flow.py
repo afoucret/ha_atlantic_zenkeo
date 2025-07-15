@@ -28,30 +28,30 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     host = data["host"]
-    mac_address = await hass.async_add_executor_job(
-        partial(get_mac_address, ip=host)
-    )
+    try:
+        mac_address = await hass.async_add_executor_job(
+            partial(get_mac_address, ip=host)
+        )
+    except Exception as exc:
+        _LOGGER.error("Could not get MAC address for %s", host)
+        raise CannotConnect(f"Could not get MAC address for {host}") from exc
 
     if not mac_address:
-        msg = "Could not get MAC address for %s", host
-        _LOGGER.error(msg)
-        raise CannotConnect(msg)
+        _LOGGER.error("Could not get MAC address for %s", host)
+        raise CannotConnect(f"Could not get MAC address for {host}")
 
     api = ZenkeoAC(host, mac_address)
 
     try:
         if not await api.get_state():
-            msg = "Failed to get state from %s, device may not be a Zenkeo AC", host
-            _LOGGER.warning(msg)
-            raise CannotConnect(msg)
-    except asyncio.TimeoutError:
-        msg = "Connection to %s timed out", host
-        _LOGGER.warning(msg)
-        raise CannotConnect(msg)
+            raise CannotConnect(f"Failed to get state from {host}, device may not be a Zenkeo AC")
+
+    except asyncio.TimeoutError as exc:
+        raise CannotConnect(f"Connection to {host} timed out") from exc
+
     except Exception as exc:
-        msg = "Unexpected error connecting to %s", host
-        _LOGGER.exception(msg)
-        raise CannotConnect(msg) from exc
+        _LOGGER.exception("Unexpected error connecting to %s", host)
+        raise CannotConnect(f"Unexpected error connecting to {host}: {exc}") from exc
 
     # Return extra information that will be stored in the config entry.
     return {"title": f"Zenkeo ({host})", "mac": mac_address}

@@ -60,7 +60,9 @@ class ZenkeoAC:
 
     async def _connect(self):
         """Connect to the AC unit."""
-        self._reader, self._writer = await asyncio.open_connection(self.ip, self.port)
+        self._reader, self._writer = await asyncio.wait_for(
+            asyncio.open_connection(self.ip, self.port), timeout=10
+        )
 
     async def _send_command(self, command: bytes) -> bytes:
         """Send a command to the AC unit and return the response."""
