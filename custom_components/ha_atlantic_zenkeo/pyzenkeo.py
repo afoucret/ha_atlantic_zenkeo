@@ -224,4 +224,5 @@ class ZenkeoAC:
             f"00 00 00 {len(bytes.fromhex(state_command.replace(' ', ''))):02x}",  # length
             state_command,
         )
-        return await self._send_command(command)
+        response = await self._send_command(command)
+        return self._parse_state(response)

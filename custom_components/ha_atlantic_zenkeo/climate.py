@@ -83,14 +83,7 @@ class ZenkeoClimate(ClimateEntity):
         """Update the state of the entity."""
         state = await self._api.get_state()
         if state:
-            self._attr_current_temperature = state.current_temperature
-            self._attr_target_temperature = state.target_temperature
-            self._attr_fan_mode = state.fan_speed.name
-            if state.power:
-                self._attr_hvac_mode = AC_TO_HA_MODE.get(state.mode)
-                self._attr_previous_hvac_mode = self._attr_hvac_mode
-            else:
-                self._attr_hvac_mode = HVACMode.OFF
+            self._update_state(state)
         else:
             _LOGGER.warning("Could not retrieve state from AC unit")
 
@@ -114,7 +107,7 @@ class ZenkeoClimate(ClimateEntity):
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
-        self._attr_hvac_mode = HVACMode.COOL  # Default to cool when turning on
+        self._attr_hvac_mode = HVACMode.COOL
         await self._send_state()
 
     async def async_turn_off(self) -> None:
@@ -125,16 +118,29 @@ class ZenkeoClimate(ClimateEntity):
     async def _send_state(self) -> None:
         """Send the current state to the AC unit."""
         if self._attr_hvac_mode == HVACMode.OFF:
-            await self._api.set_state(
+            state = await self._api.set_state(
                 power=False,
                 mode=HA_TO_AC_MODE[self._attr_previous_hvac_mode],
                 fan_speed=FanSpeed[self._attr_fan_mode],
                 target_temp=self._attr_target_temperature,
             )
+            self._update_state(state)
         else:
-            await self._api.set_state(
+            state = await self._api.set_state(
                 power=True,
                 mode=HA_TO_AC_MODE[self._attr_hvac_mode],
                 fan_speed=FanSpeed[self._attr_fan_mode],
-                target_temp=self._attr_target_temperature,
+                target_temp=self._att
+                r_target_temperature,
             )
+            self._update_state(state)
+
+    def _update_state(self, state):
+        self._attr_current_temperature = state.current_temperature
+        self._attr_target_temperature = state.target_temperature
+        self._attr_fan_mode = state.fan_speed.name
+        if state.power:
+            self._attr_hvac_mode = AC_TO_HA_MODE.get(state.mode)
+            self._attr_previous_hvac_mode = self._attr_hvac_mode
+        else:
+            self._attr_hvac_mode = HVACMode.OFF
