@@ -78,7 +78,11 @@ class ZenkeoClimate(ClimateEntity):
         self._attr_hvac_mode = HVACMode.OFF
         self._attr_previous_hvac_mode = HVACMode.COOL
         self._attr_fan_mode = FanSpeed.AUTO.name
-        self._async_update()
+
+    async def async_added_to_hass(self) -> None:
+        """Run when entity about to be added."""
+        await super().async_added_to_hass()
+        await self.async_update()
 
     async def async_update(self) -> None:
         """Update the state of the entity."""
