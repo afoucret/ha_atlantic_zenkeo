@@ -46,6 +46,11 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         if not await api.get_state():
             raise CannotConnect(f"Failed to get state from {host}, device may not be a Zenkeo AC")
 
+    try:
+        await api.hello()
+        await asyncio.sleep(1)
+        await api.init()
+
     except asyncio.TimeoutError as exc:
         raise CannotConnect(f"Connection to {host} timed out") from exc
 

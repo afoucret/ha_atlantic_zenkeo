@@ -94,7 +94,13 @@ class ZenkeoAC:
     def _append_checksum(self, command_str: str) -> str:
         """Append the checksum to a command string."""
         command_bytes = bytes.fromhex(command_str.replace(" ", ""))
-        checksum = (sum(command_bytes) - 2 * 255) & 0xFF
+        checksum = (
+            sum(
+                int(c, 16) * (i % 2 + 1)
+                for i, c in enumerate(command_str.replace(" ", ""))
+            )
+            - 2 * 255
+        ) & 0xFF
         return f"{command_str} {checksum:02x}"
 
     def _parse_state(self, response: bytes) -> ZenkeoState | None:
@@ -152,9 +158,8 @@ class ZenkeoAC:
             )
             return None
 
-    async def get_state(self) -> ZenkeoState | None:
-        """Get the current state of the AC."""
-        # Try the "hello" command to see if it elicits a state response
+    async def hello(self):
+        """Send a hello command to the AC."""
         command = self._build_command(
             "00 00 27 14 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
@@ -165,8 +170,21 @@ class ZenkeoAC:
             "00 00 00 0d",  # length of hello payload
             "ff ff 0a 00 00 00 00 00 00 01 4d 01 59",
         )
-        response = await self._send_command(command)
-        return self._parse_state(response)
+        return await self._send_command(command)
+
+    async def init(self):
+        """Send an init command to the AC."""
+        command = self._build_command(
+            "00 00 27 14 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            self._mac_to_hex(),
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            self._get_seq(),
+            "00 00 00 08",  # length of init payload
+            "ff ff 08 00 00 00 00 00 00 73 7b",
+        )
+        return await self._send_command(command)
 
     async def turn_on(self):
         """Turn the AC on."""
