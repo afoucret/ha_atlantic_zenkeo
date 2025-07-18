@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import argparse
-from custom_components.ha_atlantic_zenkeo.pyzenkeo import ZenkeoAC, Mode, FanSpeed
+from custom_components.atlantic_zenkeo.pyzenkeo import ZenkeoAC, Mode, FanSpeed
 from getmac import get_mac_address
 
 _LOGGER = logging.getLogger(__name__)

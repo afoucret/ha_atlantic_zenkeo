@@ -1,0 +1,11 @@
+{
+  "domain": "atlantic_zenkeo",
+  "name": "Atlantic Zenkeo AC",
+  "config_flow": true,
+  "documentation": "https://github.com/afoucret/ha_atlantic_zenkeo",
+  "issue_tracker": "https://github.com/afoucret/ha_atlantic_zenkeo/issues",
+  "codeowners": ["@afoucret"],
+  "requirements": ["getmac"],
+  "version": "0.1.0",
+  "iot_class": "local_polling"
+}
