@@ -163,9 +163,16 @@ class ZenkeoAC:
 
     async def get_state(self) -> ZenkeoState | None:
         """Get the current state of the AC."""
-        # This command is constructed like a set_state command but with placeholder values,
-        # hoping it will be interpreted as a read request.
-        state_command = "ff ff 22 00 00 00 00 00 00 01 4d 5f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+        # Send a dummy set_state command to trigger a state response
+        state_command = (
+            f"ff ff 22 00 00 00 00 00 00 01 4d 5f 00 00 00 00 00 00 00 00 00 00 "
+            f"00 0{Mode.COOL.value} "
+            f"00 0{FanSpeed.AUTO.value} "
+            f"00 0{Limits.OFF.value} "
+            f"00 0{0} "  # Power off
+            f"00 0{0} "  # Health off
+            f"00 00 00 0{(21 - 16):x}" # Target temp 21
+        )
         state_command = self._append_checksum(state_command)
         command = self._build_command(
             "00 00 27 14 00 00 00 00",

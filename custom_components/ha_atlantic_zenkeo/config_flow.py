@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DOMAIN
+
 from .pyzenkeo import ZenkeoAC
 
 _LOGGER = logging.getLogger(__name__)
@@ -43,9 +43,8 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     api = ZenkeoAC(host, mac_address)
 
     try:
-        await api.hello()
-        await asyncio.sleep(1)
-        await api.init()
+        if not await api.get_state():
+            raise CannotConnect(f"Failed to get state from {host}, device may not be a Zenkeo AC")
 
     except asyncio.TimeoutError as exc:
         raise CannotConnect(f"Connection to {host} timed out") from exc
@@ -58,7 +57,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return {"title": f"Zenkeo ({host})", "mac": mac_address}
 
 
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow):
     """Handle a config flow for Atlantic Zenkeo AC."""
 
     VERSION = 1
