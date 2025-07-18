@@ -4,6 +4,7 @@ import logging
 import struct
 from dataclasses import dataclass
 from enum import Enum
+from typing import Callable
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class ZenkeoState:
 class ZenkeoAC:
     """Represents a Zenkeo AC unit."""
 
-    def __init__(self, ip: str, mac: str, port: int = 56800):
+    def __init__(self, ip: str, mac: str, port: int = 56800, timeout: int = 500):
         """Initialize the AC unit."""
         self.ip = ip
         self.port = port
@@ -57,6 +58,14 @@ class ZenkeoAC:
         self._seq = 0
         self._reader = None
         self._writer = None
+        self.timeout = timeout
+
+    async def _send_request(self, create_command: Callable[[int], bytes]) -> bytes:
+        seq = self._get_seq()
+        cmd = create_command(int(seq.split(" ")[-1], 16))
+
+        response = await self._send_command(cmd)
+        return response
 
     async def _connect(self):
         """Connect to the AC unit."""
@@ -79,6 +88,17 @@ class ZenkeoAC:
         response = await self._reader.read(1024)
         _LOGGER.warning("RAW AC RESPONSE: %s", response.hex())
         return response
+
+    def _order_byte(self, n: int) -> str:
+        val = n % 256
+        if val < 16:
+            return f"00 00 00 0{val:x}"
+        else:
+            return f"00 00 00 {val:x}"
+
+    def _len4(self, cmd: str) -> str:
+        length = len(bytes.fromhex(cmd.replace(" ", "")))
+        return self._order_byte(length)
 
     def _build_command(self, *args: str) -> bytes:
         """Build a command from a series of hex strings."""
@@ -174,78 +194,73 @@ class ZenkeoAC:
             f"00 00 00 0{(21 - 16):x}" # Target temp 21
         )
         state_command = self._append_checksum(state_command)
-        command = self._build_command(
+        response = await self._send_request(lambda seq: self._build_command(
             "00 00 27 14 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             self._mac_to_hex(),
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
-            self._get_seq(),
-            f"00 00 00 {len(bytes.fromhex(state_command.replace(' ', ''))):02x}",  # length
+            self._order_byte(seq),
+            self._len4(state_command),
             state_command,
-        )
-        response = await self._send_command(command)
+        ))
         return self._parse_state(response)
 
     
 
     async def hello(self):
         """Send a hello command to the AC."""
-        command = self._build_command(
+        return await self._send_request(lambda seq: self._build_command(
             "00 00 27 14 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             self._mac_to_hex(),
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
-            self._get_seq(),
-            "00 00 00 0d",  # length of hello payload
+            self._order_byte(seq),
+            self._len4("ff ff 0a 00 00 00 00 00 00 01 4d 01 59"),
             "ff ff 0a 00 00 00 00 00 00 01 4d 01 59",
-        )
-        return await self._send_command(command)
+        ))
 
     async def init(self):
         """Send an init command to the AC."""
-        command = self._build_command(
+        return await self._send_request(lambda seq: self._build_command(
             "00 00 27 14 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             self._mac_to_hex(),
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
-            self._get_seq(),
-            "00 00 00 08",  # length of init payload
+            self._order_byte(seq),
+            self._len4("ff ff 08 00 00 00 00 00 00 73 7b"),
             "ff ff 08 00 00 00 00 00 00 73 7b",
-        )
-        return await self._send_command(command)
+        ))
 
     async def turn_on(self):
         """Turn the AC on."""
-        command = self._build_command(
+        return await self._send_request(lambda seq: self._build_command(
             "00 00 27 14 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             self._mac_to_hex(),
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
-            self._get_seq(),
-            "00 00 00 0d",  # length
+            self._order_byte(seq),
+            self._len4("ff ff 0a 00 00 00 00 00 00 01 4d 02 5a"),
             "ff ff 0a 00 00 00 00 00 00 01 4d 02 5a",
-        )
-        return await self._send_command(command)
+        ))
 
     async def turn_off(self):
         """Turn the AC off."""
-        command = self._build_command(
+        return await self._send_request(lambda seq: self._build_command(
             "00 00 27 14 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             self._mac_to_hex(),
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
-            self._get_seq(),
-            "00 00 00 0d",  # length
+            self._order_byte(seq),
+            self._len4("ff ff 0a 00 00 00 00 00 00 01 4d 03 5b"),
             "ff ff 0a 00 00 00 00 00 00 01 4d 03 5b",
-        )
-        return await self._send_command(command)
+        ))
 
-    async def set_state(
+    async def change_state(
         self,
         power: bool,
         mode: Mode,
@@ -265,15 +280,14 @@ class ZenkeoAC:
             f"00 00 00 0{(target_temp - 16):x}"
         )
         state_command = self._append_checksum(state_command)
-        command = self._build_command(
+        response = await self._send_request(lambda seq: self._build_command(
             "00 00 27 14 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
             self._mac_to_hex(),
             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
-            self._get_seq(),
-            f"00 00 00 {len(bytes.fromhex(state_command.replace(' ', ''))):02x}",  # length
+            self._order_byte(seq),
+            self._len4(state_command),
             state_command,
-        )
-        response = await self._send_command(command)
+        ))
         return self._parse_state(response)
