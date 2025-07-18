@@ -69,6 +69,9 @@ class ZenkeoAC:
         if not self._writer or self._writer.is_closing():
             await self._connect()
 
+        if self._writer is None or self._reader is None:
+            raise ConnectionError("Failed to establish connection to AC unit.")
+
         _LOGGER.debug("Sending command: %s", command.hex())
         self._writer.write(command)
         await self._writer.drain()
@@ -93,7 +96,7 @@ class ZenkeoAC:
 
     def _append_checksum(self, command_str: str) -> str:
         """Append the checksum to a command string."""
-        command_bytes = bytes.fromhex(command_str.replace(" ", ""))
+        
         checksum = (
             sum(
                 int(c, 16) * (i % 2 + 1)
@@ -157,6 +160,40 @@ class ZenkeoAC:
                 response.hex(),
             )
             return None
+
+    async def get_state(self) -> ZenkeoState | None:
+        """Get the current state of the AC."""
+        # This command is constructed like a set_state command but with placeholder values,
+        # hoping it will be interpreted as a read request.
+        state_command = "ff ff 22 00 00 00 00 00 00 01 4d 5f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+        state_command = self._append_checksum(state_command)
+        command = self._build_command(
+            "00 00 27 14 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            self._mac_to_hex(),
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            self._get_seq(),
+            f"00 00 00 {len(bytes.fromhex(state_command.replace(' ', ''))):02x}",  # length
+            state_command,
+        )
+        response = await self._send_command(command)
+        return self._parse_state(response)
+
+    async def get_state(self) -> ZenkeoState | None:
+        """Get the current state of the AC."""
+        command = self._build_command(
+            "00 00 27 14 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            self._mac_to_hex(),
+            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+            self._get_seq(),
+            "00 00 00 0d",  # length of hello payload
+            "ff ff 0a 00 00 00 00 00 00 01 4d 01 59",
+        )
+        response = await self._send_command(command)
+        return self._parse_state(response)
 
     async def hello(self):
         """Send a hello command to the AC."""
