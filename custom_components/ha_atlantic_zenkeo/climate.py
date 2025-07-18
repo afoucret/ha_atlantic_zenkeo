@@ -15,7 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 
-from ...lib.pyzenkeo import FanSpeed, ZenkeoAC, Mode
+from .pyzenkeo import FanSpeed, ZenkeoAC, Mode
 
 _LOGGER = logging.getLogger(__name__)
 

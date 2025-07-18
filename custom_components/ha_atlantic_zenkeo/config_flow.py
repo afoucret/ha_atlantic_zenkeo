@@ -14,7 +14,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 
 from .const import DOMAIN
-from ...lib.pyzenkeo import ZenkeoAC
+from .pyzenkeo import ZenkeoAC
 
 _LOGGER = logging.getLogger(__name__)
 
