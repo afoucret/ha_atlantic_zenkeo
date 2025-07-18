@@ -14,7 +14,7 @@ from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+
 from .pyzenkeo import FanSpeed, ZenkeoAC, Mode
 
 _LOGGER = logging.getLogger(__name__)
@@ -117,23 +117,29 @@ class ZenkeoClimate(ClimateEntity):
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
-        self.async_set_hvac_mode(HVACMode.OFF)
+        await self.async_set_hvac_mode(HVACMode.OFF)
         await self._send_state()
 
     async def _send_state(self) -> None:
         """Send the current state to the AC unit."""
         if self._attr_hvac_mode == HVACMode.OFF:
+            mode_to_send = HA_TO_AC_MODE.get(self._attr_previous_hvac_mode)
+            if mode_to_send is None:
+                mode_to_send = Mode.COOL
             state = await self._api.set_state(
                 power=False,
-                mode=HA_TO_AC_MODE[self._attr_previous_hvac_mode],
+                mode=mode_to_send,
                 fan_speed=FanSpeed[self._attr_fan_mode],
                 target_temp=self._attr_target_temperature,
             )
             self._update_state(state)
         else:
+            mode_to_send = HA_TO_AC_MODE.get(self._attr_hvac_mode)
+            if mode_to_send is None:
+                mode_to_send = Mode.COOL
             state = await self._api.set_state(
                 power=True,
-                mode=HA_TO_AC_MODE[self._attr_hvac_mode],
+                mode=mode_to_send,
                 fan_speed=FanSpeed[self._attr_fan_mode],
                 target_temp=self._attr_target_temperature,
             )
