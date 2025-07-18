@@ -15,7 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 
-from .pyzenkeo import FanSpeed, ZenkeoAC, Mode
+from ...lib.pyzenkeo import FanSpeed, ZenkeoAC, Mode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ class ZenkeoClimate(ClimateEntity):
             mode_to_send = HA_TO_AC_MODE.get(self._attr_previous_hvac_mode)
             if mode_to_send is None:
                 mode_to_send = Mode.COOL
-            state = await self._api.set_state(
+            state = await self._api.change_state(
                 power=False,
                 mode=mode_to_send,
                 fan_speed=FanSpeed[self._attr_fan_mode],
@@ -137,7 +137,7 @@ class ZenkeoClimate(ClimateEntity):
             mode_to_send = HA_TO_AC_MODE.get(self._attr_hvac_mode)
             if mode_to_send is None:
                 mode_to_send = Mode.COOL
-            state = await self._api.set_state(
+            state = await self._api.change_state(
                 power=True,
                 mode=mode_to_send,
                 fan_speed=FanSpeed[self._attr_fan_mode],
