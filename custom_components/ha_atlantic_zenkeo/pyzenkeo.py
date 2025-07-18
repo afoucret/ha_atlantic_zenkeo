@@ -180,20 +180,7 @@ class ZenkeoAC:
         response = await self._send_command(command)
         return self._parse_state(response)
 
-    async def get_state(self) -> ZenkeoState | None:
-        """Get the current state of the AC."""
-        command = self._build_command(
-            "00 00 27 14 00 00 00 00",
-            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
-            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
-            self._mac_to_hex(),
-            "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
-            self._get_seq(),
-            "00 00 00 0d",  # length of hello payload
-            "ff ff 0a 00 00 00 00 00 00 01 4d 01 59",
-        )
-        response = await self._send_command(command)
-        return self._parse_state(response)
+    
 
     async def hello(self):
         """Send a hello command to the AC."""
